@@ -207,7 +207,7 @@ export default function Home() {
     >
       <SEOHead
         title="Muneer Puthiya Purayil | SaaS Architect & AI Systems Engineer"
-        description="I build the systems behind $4B platforms, sub-0.1% crash-rate banking apps, and production agentic AI. 10+ years shipping high-throughput SaaS and enterprise mobile."
+        description="SaaS architect and AI systems engineer with 10+ years shipping production infrastructure. Focused on scalable architecture, agentic AI, and enterprise mobile."
         jsonLd={siteJsonLd}
       />
 
@@ -242,11 +242,11 @@ export default function Home() {
                 Accepting engagements · Q3/Q4 2026
               </div>
               <h1 className="text-[clamp(2.5rem,6vw,5.5rem)] font-medium leading-[0.95] tracking-tighter mb-10 text-balance">
-                I build the systems<br />
-                behind $4B platforms.
+                Architecture that<br />
+                scales. Code that ships.
               </h1>
               <p className="text-xl md:text-2xl text-white/60 leading-relaxed max-w-xl mb-8 text-balance">
-                SaaS architecture, agentic AI, and enterprise mobile for teams that need production-grade engineering. Not prototypes. Not MVPs. Systems that hold up at scale.
+                10+ years building production SaaS, agentic AI systems, and enterprise mobile at companies like Tekion ($4B), Mashreq Bank, and FragranceNet. Currently open for high-impact engagements.
               </p>
               {/* Social proof line */}
               <p className="text-xs font-mono text-white/30 uppercase tracking-widest mb-12">
