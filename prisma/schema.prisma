@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ContentStatus {
+  SKELETON
+  GENERATING
+  GENERATED
+  REVIEWED
+  PUBLISHED
+
+  @@map("content_status")
+}
+
+model BlogPost {
+  id           Int           @id @default(autoincrement())
+  slug         String        @unique
+  title        String
+  date         String
+  updated      String?
+  excerpt      String
+  category     String
+  tags         String[]
+  readTime     String        @map("read_time")
+  status       String        @default("published")
+  coverImage   String?       @map("cover_image")
+  coverAlt     String?       @map("cover_alt")
+  coverCaption String?       @map("cover_caption")
+  ogImage      String?       @map("og_image")
+  author       String        @default("Muneer Puthiya Purayil")
+  canonical    String?
+  noindex      Boolean       @default(false)
+  sources      String[]
+  content      String        @default("")
+
+  // Content generation fields
+  contentStatus ContentStatus @default(SKELETON) @map("content_status")
+  articleType   String?       @map("article_type")
+  isProtected   Boolean       @default(false) @map("is_protected")
+
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  @@map("blog_posts")
+  @@index([contentStatus])
+  @@index([status])
+  @@index([category])
+}

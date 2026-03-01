@@ -1,9 +1,11 @@
 node_modules/
 build/
 dist/
+.next/
+out/
 coverage/
 .DS_Store
 *.log
 .env*
 !.env.example
-src/data/blog-manifest.json
+.mcp.json

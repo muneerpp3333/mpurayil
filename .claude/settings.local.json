@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(wc:*)",
-      "mcp__claude_ai_Ahref__doc"
+      "mcp__claude_ai_Ahref__doc",
+      "Bash(test:*)",
+      "Bash(docker exec:*)",
+      "mcp__postgres__query",
+      "mcp__claude_ai_Atlassian__createJiraIssue",
+      "Bash(curl:*)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "postgres"
+  ]
 }
