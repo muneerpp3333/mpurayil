@@ -19,7 +19,8 @@ import sql from 'highlight.js/lib/languages/sql';
 import go from 'highlight.js/lib/languages/go';
 import rust from 'highlight.js/lib/languages/rust';
 import diff from 'highlight.js/lib/languages/diff';
-import { getPostBySlug, getAllPosts, getPostSEO, getPostJsonLd, getBreadcrumbJsonLd, extractFaqJsonLd } from '../lib/blog';
+import type { BlogPost as BlogPostType } from '../lib/blog';
+import { getFullPost, getAllPosts, getPostBySlug, getPostSEO, getPostJsonLd, getBreadcrumbJsonLd, extractFaqJsonLd } from '../lib/blog';
 import SEOHead from '../components/SEOHead';
 
 /* ─── Register highlight.js languages ─── */
@@ -411,12 +412,47 @@ const PROSE_CLASSES = `
   [&_.clearfix]:after:content-[''] [&_.clearfix]:after:table [&_.clearfix]:after:clear-both
 `;
 
+/* ─── Loading skeleton ─── */
+function ContentSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="h-4 bg-white/5 rounded w-full" />
+      <div className="h-4 bg-white/5 rounded w-11/12" />
+      <div className="h-4 bg-white/5 rounded w-4/5" />
+      <div className="h-8 bg-white/5 rounded w-3/5 mt-12" />
+      <div className="h-4 bg-white/5 rounded w-full" />
+      <div className="h-4 bg-white/5 rounded w-10/12" />
+      <div className="h-4 bg-white/5 rounded w-full" />
+      <div className="h-4 bg-white/5 rounded w-9/12" />
+      <div className="h-8 bg-white/5 rounded w-2/5 mt-12" />
+      <div className="h-4 bg-white/5 rounded w-full" />
+      <div className="h-4 bg-white/5 rounded w-4/5" />
+      <div className="h-4 bg-white/5 rounded w-full" />
+    </div>
+  );
+}
+
 /* ─── Main component ─── */
 export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>();
-  const post = slug ? getPostBySlug(slug) : undefined;
+  const [post, setPost] = useState<BlogPostType | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!post) {
+  // Immediate meta lookup (sync, no content)
+  const meta = slug ? getPostBySlug(slug) : undefined;
+
+  useEffect(() => {
+    if (!slug) { setLoading(false); return; }
+    setLoading(true);
+    setPost(null);
+    getFullPost(slug).then((p) => {
+      setPost(p);
+      setLoading(false);
+    });
+  }, [slug]);
+
+  // 404: no meta means slug doesn't exist at all
+  if (!meta) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -435,18 +471,28 @@ export default function BlogPost() {
     );
   }
 
-  const seo = getPostSEO(post);
-  const articleJsonLd = getPostJsonLd(post);
-  const breadcrumbJsonLd = getBreadcrumbJsonLd(post);
-  const faqJsonLd = extractFaqJsonLd(post.content);
-  const jsonLd = [articleJsonLd, breadcrumbJsonLd, ...(faqJsonLd ? [faqJsonLd] : [])];
-  const toc = useMemo(() => extractToc(post.content), [post.content]);
+  // SEO from meta (available immediately)
+  const seo = getPostSEO(meta);
+  const breadcrumbJsonLd = getBreadcrumbJsonLd(meta);
+
+  // Full JSON-LD only after content loads
+  const jsonLd = useMemo(() => {
+    const items: object[] = [breadcrumbJsonLd];
+    if (post) {
+      items.unshift(getPostJsonLd(post));
+      const faqJsonLd = extractFaqJsonLd(post.content);
+      if (faqJsonLd) items.push(faqJsonLd);
+    }
+    return items;
+  }, [post, breadcrumbJsonLd]);
+
+  const toc = useMemo(() => post ? extractToc(post.content) : [], [post]);
   const allPosts = getAllPosts();
   const currentIndex = allPosts.findIndex((p) => p.slug === slug);
   const nextPost = currentIndex >= 0 && currentIndex < allPosts.length - 1 ? allPosts[currentIndex + 1] : undefined;
   const prevPost = currentIndex > 0 ? allPosts[currentIndex - 1] : undefined;
 
-  const formattedDate = new Date(post.date).toLocaleDateString('en-US', {
+  const formattedDate = new Date(meta.date).toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric',
   });
 
@@ -474,37 +520,37 @@ export default function BlogPost() {
         {/* Category */}
         <div className="mb-6">
           <span className="px-3 py-1 bg-white/5 border border-white/10 text-[10px] font-mono uppercase tracking-widest text-white/50">
-            {post.category}
+            {meta.category}
           </span>
         </div>
 
         {/* Title */}
         <h1 className="text-[clamp(2rem,5vw,3.5rem)] font-medium leading-[1.1] tracking-tight mb-8">
-          {post.title}
+          {meta.title}
         </h1>
 
         {/* Excerpt */}
         <p className="text-xl text-white/50 leading-relaxed mb-10 max-w-2xl">
-          {post.excerpt}
+          {meta.excerpt}
         </p>
 
         {/* Meta row */}
         <div className="flex flex-wrap items-center gap-6 text-[11px] font-mono text-white/40 border-y border-white/10 py-5">
           <span className="flex items-center gap-2">
             <User className="w-3 h-3" />
-            {post.author}
+            {meta.author}
           </span>
           <span className="flex items-center gap-2">
             <Calendar className="w-3 h-3" />
-            <time dateTime={post.date}>{formattedDate}</time>
+            <time dateTime={meta.date}>{formattedDate}</time>
           </span>
           <span className="flex items-center gap-2">
-            <Clock className="w-3 h-3" /> {post.readTime}
+            <Clock className="w-3 h-3" /> {meta.readTime}
           </span>
-          {post.updated && post.updated !== post.date && (
+          {meta.updated && meta.updated !== meta.date && (
             <span className="text-white/25">
-              Updated: <time dateTime={post.updated}>
-                {new Date(post.updated).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+              Updated: <time dateTime={meta.updated}>
+                {new Date(meta.updated).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
               </time>
             </span>
           )}
@@ -512,18 +558,18 @@ export default function BlogPost() {
       </header>
 
       {/* ═══ Cover image — full article width ═══ */}
-      {post.coverImage && (
+      {meta.coverImage && (
         <figure className="max-w-[800px] mx-auto mb-16">
           <div className="overflow-hidden border border-white/10">
             <img
-              src={post.coverImage}
-              alt={post.coverAlt || post.title}
+              src={meta.coverImage}
+              alt={meta.coverAlt || meta.title}
               className="w-full h-auto"
             />
           </div>
-          {post.coverCaption && (
+          {meta.coverCaption && (
             <figcaption className="mt-3 text-[11px] font-mono text-white/30 uppercase tracking-wider">
-              {post.coverCaption}
+              {meta.coverCaption}
             </figcaption>
           )}
         </figure>
@@ -541,34 +587,38 @@ export default function BlogPost() {
           {/* Mobile TOC (shows only < xl) — rendered inside SidebarTOC component */}
 
           {/* Content */}
-          <div className={PROSE_CLASSES} itemProp="articleBody">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeRaw]}
-              components={{
-                img: ({ node, ...props }) => <MarkdownImage {...(props as any)} />,
-                h2: ({ node, children }) => <HeadingRenderer level={2}>{children}</HeadingRenderer>,
-                h3: ({ node, children }) => <HeadingRenderer level={3}>{children}</HeadingRenderer>,
-                pre: ({ children }) => <>{children}</>,
-                code: ({ className, children, ...rest }) => {
-                  // If it has a language class or is multi-line, render as code block
-                  const isBlock = className?.startsWith('language-') ||
-                    (typeof children === 'string' && children.includes('\n'));
-                  if (isBlock) {
-                    return <CodeBlock className={className}>{children}</CodeBlock>;
-                  }
-                  return <InlineCode>{children}</InlineCode>;
-                },
-              }}
-            >
-              {post.content}
-            </ReactMarkdown>
-          </div>
+          {loading ? (
+            <ContentSkeleton />
+          ) : post ? (
+            <div className={PROSE_CLASSES} itemProp="articleBody">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw]}
+                components={{
+                  img: ({ node, ...props }) => <MarkdownImage {...(props as any)} />,
+                  h2: ({ node, children }) => <HeadingRenderer level={2}>{children}</HeadingRenderer>,
+                  h3: ({ node, children }) => <HeadingRenderer level={3}>{children}</HeadingRenderer>,
+                  pre: ({ children }) => <>{children}</>,
+                  code: ({ className, children, ...rest }) => {
+                    // If it has a language class or is multi-line, render as code block
+                    const isBlock = className?.startsWith('language-') ||
+                      (typeof children === 'string' && children.includes('\n'));
+                    if (isBlock) {
+                      return <CodeBlock className={className}>{children}</CodeBlock>;
+                    }
+                    return <InlineCode>{children}</InlineCode>;
+                  },
+                }}
+              >
+                {post.content}
+              </ReactMarkdown>
+            </div>
+          ) : null}
 
           {/* Tags */}
           <div className="mt-16 pt-8 border-t border-white/10">
             <div className="flex flex-wrap gap-2">
-              {post.tags.map((tag) => (
+              {meta.tags.map((tag) => (
                 <span key={tag} className="px-3 py-1.5 bg-white/[0.03] border border-white/10 text-[10px] font-mono uppercase tracking-widest text-white/40">
                   {tag}
                 </span>
@@ -577,7 +627,7 @@ export default function BlogPost() {
           </div>
 
           {/* Sources */}
-          {post.sources && post.sources.length > 0 && post.sources[0] !== '' && (
+          {post && post.sources && post.sources.length > 0 && post.sources[0] !== '' && (
             <div className="mt-10 pt-8 border-t border-white/10">
               <h3 className="text-[10px] uppercase tracking-widest font-mono text-white/40 mb-4">Sources & References</h3>
               <ol className="space-y-2 list-decimal list-inside">
@@ -599,7 +649,7 @@ export default function BlogPost() {
                 <User className="w-5 h-5 text-white/30" />
               </div>
               <div>
-                <p className="font-medium mb-1">{post.author}</p>
+                <p className="font-medium mb-1">{meta.author}</p>
                 <p className="text-sm text-white/40 leading-relaxed">
                   SaaS Architect & AI Systems Engineer. 10+ years shipping production infrastructure across fintech, automotive, e-commerce, and healthcare.
                 </p>

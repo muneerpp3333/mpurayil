@@ -1,5 +1,5 @@
 /**
- * Blog utilities — loads and parses markdown blog posts from /content/blog/
+ * Blog utilities — loads metadata from pre-built manifest, lazy-loads content on demand
  *
  * Frontmatter Schema:
  * ---
@@ -23,7 +23,9 @@
  * ---
  */
 
-export interface BlogPost {
+import manifestData from '../data/blog-manifest.json';
+
+export interface BlogPostMeta {
   title: string;
   slug: string;
   date: string;
@@ -41,6 +43,10 @@ export interface BlogPost {
   canonical?: string;
   noindex?: boolean;
   sources?: string[];
+}
+
+// Full post = meta + content
+export interface BlogPost extends BlogPostMeta {
   content: string;
 }
 
@@ -61,12 +67,13 @@ export interface BlogSEO {
 
 const SITE_URL = 'https://muneer.architect';
 const DEFAULT_AUTHOR = 'Muneer Puthiya Purayil';
+const POSTS_PER_PAGE = 12;
 
-// Blog posts are imported at build time via Vite's import.meta.glob
-const postFiles = import.meta.glob('/content/blog/*.md', {
+// Lazy-loaded post content modules
+const postModules = import.meta.glob('/content/blog/*.md', {
   query: '?raw',
   import: 'default',
-  eager: true,
+  eager: false,
 });
 
 function parseFrontmatter(raw: string): { data: Record<string, any>; content: string } {
@@ -101,48 +108,98 @@ function parseFrontmatter(raw: string): { data: Record<string, any>; content: st
   return { data, content };
 }
 
-export function getAllPosts(): BlogPost[] {
-  const posts: BlogPost[] = [];
+// ---------------------------------------------------------------------------
+// Core data access
+// ---------------------------------------------------------------------------
 
-  for (const [filepath, raw] of Object.entries(postFiles)) {
-    const { data, content } = parseFrontmatter(raw as string);
-
-    if (data.status === 'draft') continue;
-
-    posts.push({
-      title: data.title || 'Untitled',
-      slug: data.slug || filepath.split('/').pop()?.replace('.md', '') || '',
-      date: data.date || '',
-      updated: data.updated || undefined,
-      excerpt: data.excerpt || '',
-      category: data.category || '',
-      tags: Array.isArray(data.tags) ? data.tags : [],
-      readTime: data.readTime || '',
-      status: data.status || 'published',
-      coverImage: data.coverImage || undefined,
-      coverAlt: data.coverAlt || undefined,
-      coverCaption: data.coverCaption || undefined,
-      ogImage: data.ogImage || data.coverImage || undefined,
-      author: data.author || DEFAULT_AUTHOR,
-      canonical: data.canonical || undefined,
-      noindex: data.noindex === true,
-      sources: Array.isArray(data.sources) ? data.sources : undefined,
-      content,
-    });
-  }
-
-  // Sort by date descending
-  return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+export function getAllPosts(): BlogPostMeta[] {
+  return manifestData as BlogPostMeta[];
 }
 
-export function getPostBySlug(slug: string): BlogPost | undefined {
+export function getPostBySlug(slug: string): BlogPostMeta | undefined {
   return getAllPosts().find((p) => p.slug === slug);
 }
+
+export async function getPostContent(slug: string): Promise<string | null> {
+  const path = `/content/blog/${slug}.md`;
+  const loader = postModules[path];
+  if (!loader) return null;
+  const raw = (await loader()) as string;
+  const { content } = parseFrontmatter(raw);
+  return content;
+}
+
+export async function getFullPost(slug: string): Promise<BlogPost | null> {
+  const meta = getPostBySlug(slug);
+  if (!meta) return null;
+  const content = await getPostContent(slug);
+  if (!content) return null;
+  return { ...meta, content };
+}
+
+// ---------------------------------------------------------------------------
+// Pagination & filtering helpers
+// ---------------------------------------------------------------------------
+
+export function getPaginatedPosts(
+  page: number,
+  category?: string,
+  tag?: string,
+): {
+  posts: BlogPostMeta[];
+  totalPages: number;
+  currentPage: number;
+  totalPosts: number;
+} {
+  let filtered = getAllPosts();
+  if (category) filtered = filtered.filter((p) => p.category === category);
+  if (tag) filtered = filtered.filter((p) => p.tags.includes(tag));
+  const totalPosts = filtered.length;
+  const totalPages = Math.ceil(totalPosts / POSTS_PER_PAGE);
+  const currentPage = Math.min(Math.max(1, page), totalPages || 1);
+  const start = (currentPage - 1) * POSTS_PER_PAGE;
+  return {
+    posts: filtered.slice(start, start + POSTS_PER_PAGE),
+    totalPages,
+    currentPage,
+    totalPosts,
+  };
+}
+
+export function getCategories(): string[] {
+  const cats = new Set(getAllPosts().map((p) => p.category));
+  return Array.from(cats).sort();
+}
+
+export function getTopTags(limit = 20): string[] {
+  const tagCount = new Map<string, number>();
+  for (const post of getAllPosts()) {
+    for (const tag of post.tags) {
+      tagCount.set(tag, (tagCount.get(tag) || 0) + 1);
+    }
+  }
+  return Array.from(tagCount.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([tag]) => tag);
+}
+
+export function getPostsByCategory(category: string): BlogPostMeta[] {
+  return getAllPosts().filter((p) => p.category === category);
+}
+
+export function getPostsByTag(tag: string): BlogPostMeta[] {
+  return getAllPosts().filter((p) => p.tags.includes(tag));
+}
+
+// ---------------------------------------------------------------------------
+// SEO & structured data
+// ---------------------------------------------------------------------------
 
 /**
  * Generate SEO metadata for a blog post
  */
-export function getPostSEO(post: BlogPost): BlogSEO {
+export function getPostSEO(post: BlogPostMeta | BlogPost): BlogSEO {
   return {
     title: `${post.title} — Muneer Puthiya Purayil`,
     description: post.excerpt,
@@ -198,7 +255,7 @@ export function getPostJsonLd(post: BlogPost): object {
 /**
  * Generate JSON-LD for the blog listing page (CollectionPage)
  */
-export function getBlogListJsonLd(posts: BlogPost[]): object {
+export function getBlogListJsonLd(posts: BlogPostMeta[]): object {
   return {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
@@ -270,6 +327,40 @@ export function getSiteJsonLd(): object {
         publisher: { '@id': `${SITE_URL}/#person` },
         inLanguage: 'en-US',
       },
+      {
+        '@type': 'ProfessionalService',
+        '@id': `${SITE_URL}/#business`,
+        name: 'Muneer Puthiya Purayil — Architecture & Engineering',
+        url: SITE_URL,
+        description: 'SaaS architecture, agentic AI systems, and production-grade website templates. Based in Dubai, serving clients globally.',
+        founder: { '@id': `${SITE_URL}/#person` },
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: 'Dubai',
+          addressCountry: 'AE',
+        },
+        geo: {
+          '@type': 'GeoCoordinates',
+          latitude: 25.2048,
+          longitude: 55.2708,
+        },
+        areaServed: [
+          { '@type': 'Country', name: 'United Arab Emirates' },
+          { '@type': 'Country', name: 'India' },
+          { '@type': 'Place', name: 'Worldwide (Remote)' },
+        ],
+        serviceType: [
+          'SaaS Architecture',
+          'Agentic AI Systems',
+          'Website Templates',
+          'Mobile App Development',
+        ],
+        priceRange: '$$',
+        sameAs: [
+          'https://linkedin.com/in/muneer-p-5052b6128',
+          'https://github.com/muneerpp3333',
+        ],
+      },
     ],
   };
 }
@@ -277,7 +368,7 @@ export function getSiteJsonLd(): object {
 /**
  * Generate BreadcrumbList JSON-LD for a blog post
  */
-export function getBreadcrumbJsonLd(post: BlogPost): object {
+export function getBreadcrumbJsonLd(post: BlogPostMeta | BlogPost): object {
   return {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',

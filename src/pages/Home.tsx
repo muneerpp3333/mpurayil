@@ -1,8 +1,9 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'motion/react';
-import { ArrowUpRight, Layers, Smartphone, Brain, Zap } from 'lucide-react';
+import { ArrowUpRight, Layers, Smartphone, Brain, Zap, Clock, Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getSiteJsonLd } from '../lib/blog';
+import { getSiteJsonLd, getAllPosts } from '../lib/blog';
+import { getFeaturedTemplates } from '../data/templates';
 import SEOHead from '../components/SEOHead';
 
 /* ─── Dot grid background ─── */
@@ -116,6 +117,45 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
     >
       {children}
     </motion.div>
+  );
+}
+
+/* ─── Blog card with lens glare ─── */
+function GlareCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [glare, setGlare] = useState({ x: 50, y: 50, opacity: 0 });
+
+  const handleMove = useCallback((e: React.MouseEvent) => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    setGlare({
+      x: ((e.clientX - rect.left) / rect.width) * 100,
+      y: ((e.clientY - rect.top) / rect.height) * 100,
+      opacity: 1,
+    });
+  }, []);
+
+  const handleLeave = useCallback(() => {
+    setGlare(prev => ({ ...prev, opacity: 0 }));
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
+      className={`relative overflow-hidden ${className}`}
+    >
+      {/* Lens glare */}
+      <div
+        className="absolute inset-0 pointer-events-none z-10 transition-opacity duration-500"
+        style={{
+          opacity: glare.opacity,
+          background: `radial-gradient(350px circle at ${glare.x}% ${glare.y}%, rgba(255,255,255,0.06), transparent 60%)`,
+        }}
+      />
+      {children}
+    </div>
   );
 }
 
@@ -500,6 +540,117 @@ export default function Home() {
                 <ArsenalTag>No-Code Builders</ArsenalTag>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════ FROM THE JOURNAL ═══════════════ */}
+      <section className="py-32 px-6 bg-white/[0.02] relative">
+        <div className="max-w-[1400px] mx-auto relative z-10">
+          <SectionLabel>From the Journal</SectionLabel>
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
+            <div>
+              <h2 className="text-4xl md:text-5xl font-medium tracking-tight mb-4">Recent Writing.</h2>
+              <p className="text-white/40 text-lg max-w-lg">Notes on architecture, systems design, and agentic AI. Drawn from production work, not theory.</p>
+            </div>
+            <Link
+              to="/blog"
+              className="group flex items-center gap-3 text-[10px] uppercase tracking-[0.2em] font-mono text-white/40 hover:text-white transition-colors shrink-0"
+            >
+              All articles <ArrowUpRight className="w-4 h-4 group-hover:rotate-45 transition-transform" />
+            </Link>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-[1px] bg-white/10 border border-white/10">
+            {getAllPosts().slice(0, 3).map((post) => (
+              <GlareCard key={post.slug}>
+                <Link
+                  to={`/blog/${post.slug}`}
+                  className="group bg-onyx p-8 md:p-10 flex flex-col justify-between min-h-[360px] transition-colors relative block"
+                >
+
+                <div>
+                  <div className="flex items-center gap-4 mb-6 text-[10px] font-mono uppercase tracking-widest text-white/30">
+                    <span className="flex items-center gap-1.5"><Tag className="w-3 h-3" /> {post.category}</span>
+                    <span className="flex items-center gap-1.5"><Clock className="w-3 h-3" /> {post.readTime}</span>
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-medium tracking-tight mb-4 group-hover:translate-x-1 transition-transform duration-300">
+                    {post.title}
+                  </h3>
+                  <p className="text-white/40 text-sm leading-relaxed line-clamp-3">
+                    {post.excerpt}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between mt-8 pt-6 border-t border-white/5">
+                  <span className="text-[10px] font-mono text-white/20 uppercase tracking-widest">
+                    {new Date(post.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}
+                  </span>
+                  <ArrowUpRight className="w-4 h-4 text-white/20 group-hover:text-white/60 group-hover:rotate-45 transition-all duration-300" />
+                </div>
+              </Link>
+              </GlareCard>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════ READY-MADE TEMPLATES ═══════════════ */}
+      <section className="py-32 px-6 relative">
+        <div className="max-w-[1400px] mx-auto relative z-10">
+          <SectionLabel>Ready-Made Solutions</SectionLabel>
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
+            <div>
+              <h2 className="text-4xl md:text-5xl font-medium tracking-tight mb-4">Website Templates.</h2>
+              <p className="text-white/40 text-lg max-w-lg">Production-grade, conversion-optimized templates. Live in 7 days, starting at 1499 AED.</p>
+            </div>
+            <Link
+              to="/templates"
+              className="group flex items-center gap-3 text-[10px] uppercase tracking-[0.2em] font-mono text-white/40 hover:text-white transition-colors shrink-0"
+            >
+              View all templates <ArrowUpRight className="w-4 h-4 group-hover:rotate-45 transition-transform" />
+            </Link>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-[1px] bg-white/10 border border-white/10">
+            {getFeaturedTemplates(3).map((template) => (
+              <GlareCard key={template.slug}>
+                <Link
+                  to={`/templates/${template.slug}`}
+                  className="group bg-onyx flex flex-col min-h-[400px] transition-colors relative block"
+                >
+                  <div className="relative overflow-hidden aspect-[3/2]">
+                    <img
+                      src={template.image}
+                      alt={template.shortTitle}
+                      className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-onyx/60 to-transparent" />
+                    <span className="absolute top-4 left-4 px-3 py-1 bg-onyx/80 backdrop-blur-sm border border-white/10 text-[9px] font-mono uppercase tracking-widest text-white/60">
+                      {template.category}
+                    </span>
+                  </div>
+                  <div className="p-8 flex flex-col flex-1">
+                    <h3 className="text-lg font-medium tracking-tight mb-3 group-hover:translate-x-1 transition-transform duration-300">
+                      {template.shortTitle}
+                    </h3>
+                    <p className="text-white/40 text-sm leading-relaxed mb-6 line-clamp-2 flex-1">
+                      {template.description}
+                    </p>
+                    <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                      <div>
+                        <span className="text-xl font-medium tracking-tight">{template.price}</span>
+                        <span className="text-sm text-white/40 ml-1">{template.currency}</span>
+                      </div>
+                      <span className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">
+                        View <ArrowUpRight className="w-3.5 h-3.5 group-hover:rotate-45 transition-transform duration-300" />
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              </GlareCard>
+            ))}
           </div>
         </div>
       </section>

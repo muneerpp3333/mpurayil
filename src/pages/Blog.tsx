@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
 import { ArrowUpRight, Clock, Tag } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { getAllPosts, getBlogListJsonLd } from '../lib/blog';
+import { Link, useSearchParams } from 'react-router-dom';
+import { getPaginatedPosts, getCategories, getTopTags, getBlogListJsonLd } from '../lib/blog';
 import SEOHead from '../components/SEOHead';
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
@@ -46,9 +46,49 @@ const BlogCard = ({ title, excerpt, date, readTime, category, slug, coverImage }
   </Link>
 );
 
+function buildSearchParams(params: Record<string, string | number | undefined>): string {
+  const sp = new URLSearchParams();
+  for (const [key, val] of Object.entries(params)) {
+    if (val !== undefined && val !== '') sp.set(key, String(val));
+  }
+  const str = sp.toString();
+  return str ? `?${str}` : '';
+}
+
+function getPageNumbers(current: number, total: number): (number | 'ellipsis')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+
+  const pages: (number | 'ellipsis')[] = [1];
+
+  if (current > 3) pages.push('ellipsis');
+
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  for (let i = start; i <= end; i++) pages.push(i);
+
+  if (current < total - 2) pages.push('ellipsis');
+
+  pages.push(total);
+  return pages;
+}
+
 export default function Blog() {
-  const posts = getAllPosts();
-  const jsonLd = getBlogListJsonLd(posts);
+  const [searchParams] = useSearchParams();
+  const page = Number(searchParams.get('page')) || 1;
+  const activeCategory = searchParams.get('category') || '';
+  const activeTag = searchParams.get('tag') || '';
+
+  const categories = useMemo(() => getCategories(), []);
+  const topTags = useMemo(() => getTopTags(15), []);
+
+  const { posts, totalPages, currentPage, totalPosts } = useMemo(
+    () => getPaginatedPosts(page, activeCategory || undefined, activeTag || undefined),
+    [page, activeCategory, activeTag],
+  );
+
+  const jsonLd = useMemo(() => getBlogListJsonLd(posts), [posts]);
+
+  const pageNumbers = useMemo(() => getPageNumbers(currentPage, totalPages), [currentPage, totalPages]);
 
   return (
     <motion.div
@@ -74,6 +114,62 @@ export default function Blog() {
           </p>
         </header>
 
+        {/* Category filter */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <Link
+            to={buildSearchParams({})}
+            className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest border transition-colors ${
+              !activeCategory
+                ? 'bg-white text-black border-white'
+                : 'bg-transparent text-white/40 border-white/10 hover:border-white/20'
+            }`}
+          >
+            All
+          </Link>
+          {categories.map((cat) => (
+            <Link
+              key={cat}
+              to={buildSearchParams({ category: cat, tag: activeTag || undefined })}
+              className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest border transition-colors ${
+                activeCategory === cat
+                  ? 'bg-white text-black border-white'
+                  : 'bg-transparent text-white/40 border-white/10 hover:border-white/20'
+              }`}
+            >
+              {cat}
+            </Link>
+          ))}
+        </div>
+
+        {/* Tag filter */}
+        {topTags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-12">
+            {topTags.map((tag) => (
+              <Link
+                key={tag}
+                to={buildSearchParams({
+                  tag: activeTag === tag ? undefined : tag,
+                  category: activeCategory || undefined,
+                })}
+                className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-widest border transition-colors ${
+                  activeTag === tag
+                    ? 'bg-white text-black border-white'
+                    : 'bg-transparent text-white/30 border-white/5 hover:border-white/15'
+                }`}
+              >
+                {tag}
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {/* Post count */}
+        <div className="flex items-center justify-between mb-2 text-[10px] font-mono uppercase tracking-widest text-white/30">
+          <span>{totalPosts} article{totalPosts !== 1 ? 's' : ''}</span>
+          {totalPages > 1 && <span>Page {currentPage} of {totalPages}</span>}
+        </div>
+
+        {/* Posts */}
         <div className="border-t border-white/10">
           {posts.map((post) => (
             <BlogCard key={post.slug} {...post} />
@@ -84,6 +180,63 @@ export default function Blog() {
           <div className="mt-24 py-20 text-center">
             <p className="text-white/20 font-mono text-xs uppercase tracking-widest">No published articles yet.</p>
           </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <nav className="flex items-center justify-center gap-1 mt-16 mb-8">
+            {currentPage > 1 ? (
+              <Link
+                to={`/blog${buildSearchParams({
+                  page: currentPage - 1 > 1 ? currentPage - 1 : undefined,
+                  category: activeCategory || undefined,
+                  tag: activeTag || undefined,
+                })}`}
+                className="px-3 py-2 text-[11px] font-mono uppercase tracking-widest text-white/40 hover:text-white/60 transition-colors"
+              >
+                Prev
+              </Link>
+            ) : (
+              <span className="px-3 py-2 text-[11px] font-mono uppercase tracking-widest text-white/10">Prev</span>
+            )}
+
+            {pageNumbers.map((p, i) =>
+              p === 'ellipsis' ? (
+                <span key={`e${i}`} className="px-2 py-2 text-[11px] font-mono text-white/20">...</span>
+              ) : (
+                <Link
+                  key={p}
+                  to={`/blog${buildSearchParams({
+                    page: p > 1 ? p : undefined,
+                    category: activeCategory || undefined,
+                    tag: activeTag || undefined,
+                  })}`}
+                  className={`px-3 py-2 text-[11px] font-mono transition-colors ${
+                    p === currentPage
+                      ? 'text-white border-b-2 border-white'
+                      : 'text-white/40 hover:text-white/60'
+                  }`}
+                >
+                  {p}
+                </Link>
+              ),
+            )}
+
+            {currentPage < totalPages ? (
+              <Link
+                to={`/blog${buildSearchParams({
+                  page: currentPage + 1,
+                  category: activeCategory || undefined,
+                  tag: activeTag || undefined,
+                })}`}
+                className="px-3 py-2 text-[11px] font-mono uppercase tracking-widest text-white/40 hover:text-white/60 transition-colors"
+              >
+                Next
+              </Link>
+            ) : (
+              <span className="px-3 py-2 text-[11px] font-mono uppercase tracking-widest text-white/10">Next</span>
+            )}
+          </nav>
         )}
       </div>
     </motion.div>

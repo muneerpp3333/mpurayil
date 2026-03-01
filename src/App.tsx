@@ -1,15 +1,21 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+};
 import {
   ArrowUpRight,
   Mail,
-  Phone,
   Linkedin,
   Github,
   Menu,
   X,
   MapPin,
-  Send
+  Send,
+  Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -19,36 +25,68 @@ import Portfolio from './pages/Portfolio';
 import OpenSource from './pages/OpenSource';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
+import Templates from './pages/Templates';
+import TemplateDetail from './pages/TemplateDetail';
+
+/* ─── Nav link with hover effect ─── */
+const NavLink = ({ to, active, children }: { to: string; active: boolean; children: React.ReactNode }) => (
+  <Link
+    to={to}
+    className={`relative py-1 transition-colors duration-300 ${active ? 'text-white' : 'text-white/40 hover:text-white'}`}
+  >
+    {children}
+  </Link>
+);
 
 const Nav = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  /* ─── Scroll-aware background ─── */
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 60);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const links = [
     { name: 'Home', path: '/' },
     { name: 'Portfolio', path: '/portfolio' },
+    { name: 'Templates', path: '/templates' },
     { name: 'Open Source', path: '/open-source' },
     { name: 'Blog', path: '/blog' },
   ];
 
   return (
     <>
-      <nav className="fixed top-0 w-full z-[100] mix-blend-difference px-6 py-8">
+      <nav
+        className={`fixed top-0 w-full z-[100] px-6 transition-all duration-500 ${
+          scrolled
+            ? 'py-4 bg-onyx/80 backdrop-blur-xl'
+            : 'py-8 bg-transparent mix-blend-difference'
+        }`}
+      >
         <div className="max-w-[1400px] mx-auto flex justify-between items-center">
-          <Link to="/" className="font-mono text-xs tracking-tighter">
-            MUNEER.ARCHITECT <span className="text-white/40">/ ARCHITECTURE & AI</span>
-          </Link>
+          <button
+            onClick={() => { navigate('/'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            className="font-mono text-lg tracking-tight hover:opacity-70 transition-opacity duration-300"
+          >
+            MUNEER <span className="text-white/40 text-sm hidden sm:inline">/ ARCHITECTURE & AI</span>
+          </button>
 
           {/* Desktop Nav */}
-          <div className="hidden md:flex gap-12 items-center text-[10px] uppercase tracking-[0.2em] font-mono">
+          <div className="hidden md:flex gap-10 items-center text-[10px] uppercase tracking-[0.2em] font-mono">
             {links.map(link => (
-              <Link
+              <NavLink
                 key={link.path}
                 to={link.path}
-                className={`hover:text-white/60 transition-colors ${location.pathname === link.path ? 'text-white' : 'text-white/40'}`}
+                active={location.pathname === link.path || (link.path === '/blog' && location.pathname.startsWith('/blog/')) || (link.path === '/templates' && location.pathname.startsWith('/templates/'))}
               >
                 {link.name}
-              </Link>
+              </NavLink>
             ))}
             <a
               href="#intake"
@@ -120,12 +158,15 @@ export default function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <div className="min-h-screen bg-onyx text-white font-sans selection:bg-white selection:text-black">
         <Nav />
 
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/templates" element={<Templates />} />
+          <Route path="/templates/:slug" element={<TemplateDetail />} />
           <Route path="/open-source" element={<OpenSource />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
@@ -159,13 +200,13 @@ export default function App() {
 
                 {/* Contact Info */}
                 <div className="space-y-5 text-white/50 font-mono text-sm">
-                  <a href="mailto:muneer.pp@outlook.com" className="flex items-center gap-4 hover:text-white transition-colors">
+                  <a href="mailto:muneer@gitspark.com" className="flex items-center gap-4 hover:text-white transition-colors">
                     <Mail className="w-4 h-4 text-white/30" />
-                    <span>muneer.pp@outlook.com</span>
+                    <span>muneer@gitspark.com</span>
                   </a>
-                  <a href="tel:+971524013333" className="flex items-center gap-4 hover:text-white transition-colors">
-                    <Phone className="w-4 h-4 text-white/30" />
-                    <span>+971-524013333</span>
+                  <a href="https://calendly.com/gitspark/discussion-with-gitspark" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 hover:text-white transition-colors">
+                    <Calendar className="w-4 h-4 text-white/30" />
+                    <span>Book a call</span>
                   </a>
                   <div className="flex items-center gap-4 text-white/30">
                     <MapPin className="w-4 h-4" />
@@ -283,7 +324,7 @@ export default function App() {
             <div className="flex gap-8">
               <a href="https://linkedin.com/in/muneer-p-5052b6128" target="_blank" rel="noopener noreferrer" className="hover:text-white/50 transition-colors">LinkedIn</a>
               <a href="https://github.com/muneerpp3333" target="_blank" rel="noopener noreferrer" className="hover:text-white/50 transition-colors">GitHub</a>
-              <a href="mailto:muneer.pp@outlook.com" className="hover:text-white/50 transition-colors">Email</a>
+              <a href="mailto:muneer@gitspark.com" className="hover:text-white/50 transition-colors">Email</a>
             </div>
             <span>Dubai, UAE</span>
           </div>

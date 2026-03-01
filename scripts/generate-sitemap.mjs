@@ -15,8 +15,27 @@ const OUT_FILE = resolve('public/sitemap.xml');
 const STATIC_PAGES = [
   { path: '/',            changefreq: 'monthly',  priority: 1.0 },
   { path: '/portfolio',   changefreq: 'monthly',  priority: 0.8 },
+  { path: '/templates',   changefreq: 'monthly',  priority: 0.8 },
   { path: '/open-source', changefreq: 'monthly',  priority: 0.7 },
   { path: '/blog',        changefreq: 'weekly',   priority: 0.9 },
+];
+
+// Template slugs — kept in sync with src/data/templates.ts
+const TEMPLATE_SLUGS = [
+  'saloon-website',
+  'online-tshirt-store',
+  'shopify-online-store',
+  'superhero-tshirt-store',
+  'online-makeup-store',
+  'gaming-store',
+  'electronics-store',
+  'furniture-store-shopify',
+  'womens-clothing-brand',
+  'shopify-store-grow',
+  'ecommerce-retail',
+  'electronics-store-v2',
+  'home-repair-startup',
+  'pharma-brand',
 ];
 
 function escapeXml(s) {
@@ -74,6 +93,17 @@ async function main() {
 `;
   }
 
+  // Template pages
+  for (const slug of TEMPLATE_SLUGS) {
+    xml += `  <url>
+    <loc>${escapeXml(SITE_URL + '/templates/' + slug)}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+`;
+  }
+
   // Blog posts
   for (const post of posts) {
     xml += `  <url>
@@ -99,7 +129,7 @@ async function main() {
 `;
 
   await writeFile(OUT_FILE, xml, 'utf-8');
-  console.log(`✓ Sitemap written to ${OUT_FILE} (${STATIC_PAGES.length + posts.length} URLs)`);
+  console.log(`✓ Sitemap written to ${OUT_FILE} (${STATIC_PAGES.length + TEMPLATE_SLUGS.length + posts.length} URLs)`);
 }
 
 main().catch(console.error);

@@ -1,0 +1,5 @@
+name = "mpurayil-com"
+pages_build_output_dir = "dist"
+
+[env.production]
+name = "mpurayil-com"
