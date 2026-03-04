@@ -5,11 +5,11 @@ export const metadata: Metadata = {
   title: 'Portfolio',
   description:
     'Architecture decisions and their measurable outcomes across fintech, automotive, e-commerce, and healthcare. $4B platforms, sub-0.1% crash rates, 300% efficiency gains.',
-  alternates: { canonical: 'https://muneer.architect/portfolio' },
+  alternates: { canonical: 'https://mpurayil.com/portfolio' },
   openGraph: {
     title: 'Portfolio',
     description: 'Architecture decisions and their measurable outcomes across fintech, automotive, e-commerce, and healthcare.',
-    url: 'https://muneer.architect/portfolio',
+    url: 'https://mpurayil.com/portfolio',
     images: [{ url: '/og-default.png', width: 1200, height: 630 }],
   },
   twitter: {
@@ -71,7 +71,7 @@ const portfolioJsonLd = {
   name: 'Portfolio | Muneer Puthiya Purayil',
   description:
     'Architecture decisions and their measurable outcomes across fintech, automotive, e-commerce, and healthcare.',
-  url: 'https://muneer.architect/portfolio',
+  url: 'https://mpurayil.com/portfolio',
   mainEntity: {
     '@type': 'ItemList',
     itemListElement: caseStudies.map((cs, i) => ({
@@ -87,8 +87,8 @@ const breadcrumbJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://muneer.architect' },
-    { '@type': 'ListItem', position: 2, name: 'Portfolio', item: 'https://muneer.architect/portfolio' },
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://mpurayil.com' },
+    { '@type': 'ListItem', position: 2, name: 'Portfolio', item: 'https://mpurayil.com/portfolio' },
   ],
 };
 

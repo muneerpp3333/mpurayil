@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   ArrowUpRight,
   Mail,
@@ -9,15 +9,109 @@ import {
   MapPin,
   Send,
   Calendar,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { trackCTAClick, trackFormStart, trackFormSubmit, trackFormError, trackExternalLink } from '../lib/analytics';
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (container: string | HTMLElement, options: Record<string, unknown>) => string;
+      reset: (widgetId: string) => void;
+    };
+  }
+}
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
 
 const IntakeSection = () => {
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef = useRef<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!TURNSTILE_SITE_KEY || !turnstileRef.current) return;
+
+    const renderWidget = () => {
+      if (window.turnstile && turnstileRef.current && !widgetIdRef.current) {
+        widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+          sitekey: TURNSTILE_SITE_KEY,
+          theme: 'dark',
+          callback: (token: string) => setTurnstileToken(token),
+          'expired-callback': () => setTurnstileToken(null),
+        });
+      }
+    };
+
+    // If turnstile script already loaded
+    if (window.turnstile) {
+      renderWidget();
+      return;
+    }
+
+    // Load turnstile script
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.async = true;
+    script.onload = renderWidget;
+    document.head.appendChild(script);
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubmitted(true);
+    setError(null);
+
+    if (!turnstileToken) {
+      setError('Please complete the verification.');
+      trackFormError('turnstile_not_completed');
+      return;
+    }
+
+    setLoading(true);
+
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    trackFormStart();
+
+    try {
+      const res = await fetch('/api/intake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.get('name'),
+          email: formData.get('email'),
+          company: formData.get('company'),
+          scope: formData.get('scope'),
+          budget: formData.get('budget'),
+          details: formData.get('details'),
+          turnstileToken,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Submission failed');
+      }
+
+      trackFormSubmit(formData.get('scope') as string, formData.get('budget') as string);
+      setSubmitted(true);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+      trackFormError(msg);
+      setError(msg);
+      // Reset turnstile
+      if (window.turnstile && widgetIdRef.current) {
+        window.turnstile.reset(widgetIdRef.current);
+        setTurnstileToken(null);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -48,11 +142,11 @@ const IntakeSection = () => {
 
             {/* Contact Info */}
             <div className="space-y-5 text-white/50 font-mono text-sm">
-              <a href="mailto:muneer@gitspark.com" className="flex items-center gap-4 hover:text-white transition-colors">
+              <a href="mailto:muneer@gitspark.com" onClick={() => trackCTAClick('email', 'intake_section')} className="flex items-center gap-4 hover:text-white transition-colors">
                 <Mail className="w-4 h-4 text-white/30" />
                 <span>muneer@gitspark.com</span>
               </a>
-              <a href="https://calendly.com/gitspark/discussion-with-gitspark" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 hover:text-white transition-colors">
+              <a href="https://calendly.com/gitspark/discussion-with-gitspark" target="_blank" rel="noopener noreferrer" onClick={() => trackCTAClick('calendly', 'intake_section')} className="flex items-center gap-4 hover:text-white transition-colors">
                 <Calendar className="w-4 h-4 text-white/30" />
                 <span>Book a call</span>
               </a>
@@ -80,6 +174,7 @@ const IntakeSection = () => {
                     <label className="text-[10px] uppercase tracking-widest font-mono text-white/40 block mb-3">Full Name</label>
                     <input
                       type="text"
+                      name="name"
                       required
                       placeholder="Jane Smith"
                       className="w-full bg-transparent border-b border-white/15 py-3 text-sm focus:outline-none focus:border-white/50 transition-colors placeholder:text-white/20"
@@ -89,6 +184,7 @@ const IntakeSection = () => {
                     <label className="text-[10px] uppercase tracking-widest font-mono text-white/40 block mb-3">Email</label>
                     <input
                       type="email"
+                      name="email"
                       required
                       placeholder="jane@company.com"
                       className="w-full bg-transparent border-b border-white/15 py-3 text-sm focus:outline-none focus:border-white/50 transition-colors placeholder:text-white/20"
@@ -100,6 +196,7 @@ const IntakeSection = () => {
                   <label className="text-[10px] uppercase tracking-widest font-mono text-white/40 block mb-3">Company / Organization</label>
                   <input
                     type="text"
+                    name="company"
                     placeholder="Acme Corp"
                     className="w-full bg-transparent border-b border-white/15 py-3 text-sm focus:outline-none focus:border-white/50 transition-colors placeholder:text-white/20"
                   />
@@ -107,7 +204,10 @@ const IntakeSection = () => {
 
                 <div>
                   <label className="text-[10px] uppercase tracking-widest font-mono text-white/40 block mb-3">Project Scope</label>
-                  <select className="w-full bg-transparent border-b border-white/15 py-3 text-sm focus:outline-none focus:border-white/50 transition-colors appearance-none cursor-pointer text-white/60">
+                  <select
+                    name="scope"
+                    className="w-full bg-transparent border-b border-white/15 py-3 text-sm focus:outline-none focus:border-white/50 transition-colors appearance-none cursor-pointer text-white/60"
+                  >
                     <option value="" className="bg-[#050505]">Select engagement type</option>
                     <option value="saas" className="bg-[#050505]">SaaS Architecture & Platform Engineering</option>
                     <option value="ai" className="bg-[#050505]">Agentic AI & LLM Integration</option>
@@ -119,7 +219,10 @@ const IntakeSection = () => {
 
                 <div>
                   <label className="text-[10px] uppercase tracking-widest font-mono text-white/40 block mb-3">Budget Minimum (USD)</label>
-                  <select className="w-full bg-transparent border-b border-white/15 py-3 text-sm focus:outline-none focus:border-white/50 transition-colors appearance-none cursor-pointer text-white/60">
+                  <select
+                    name="budget"
+                    className="w-full bg-transparent border-b border-white/15 py-3 text-sm focus:outline-none focus:border-white/50 transition-colors appearance-none cursor-pointer text-white/60"
+                  >
                     <option value="" className="bg-[#050505]">Select budget range</option>
                     <option value="25-50" className="bg-[#050505]">$25,000 - $50,000</option>
                     <option value="50-100" className="bg-[#050505]">$50,000 - $100,000</option>
@@ -131,18 +234,39 @@ const IntakeSection = () => {
                 <div>
                   <label className="text-[10px] uppercase tracking-widest font-mono text-white/40 block mb-3">Project Details</label>
                   <textarea
+                    name="details"
                     className="w-full bg-transparent border-b border-white/15 py-3 text-sm focus:outline-none focus:border-white/50 transition-colors resize-none placeholder:text-white/20"
                     placeholder="Overview of your project, timeline, and key objectives..."
                     rows={4}
                   />
                 </div>
 
+                {/* Turnstile Widget */}
+                <div ref={turnstileRef} />
+
+                {error && (
+                  <div className="flex items-center gap-3 text-red-400 text-sm">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  className="w-full bg-white text-black py-5 text-[10px] uppercase tracking-[0.2em] font-mono font-bold hover:bg-white/90 transition-colors flex items-center justify-center gap-3"
+                  disabled={loading}
+                  className="w-full bg-white text-black py-5 text-[10px] uppercase tracking-[0.2em] font-mono font-bold hover:bg-white/90 transition-colors flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Send className="w-3.5 h-3.5" />
-                  Submit Inquiry
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" />
+                      Submit Inquiry
+                    </>
+                  )}
                 </button>
               </form>
             ) : (
@@ -156,7 +280,7 @@ const IntakeSection = () => {
                 </div>
                 <h3 className="text-2xl font-medium mb-4">Inquiry Received</h3>
                 <p className="text-white/50 max-w-sm leading-relaxed">
-                  Inquiry received. You'll hear back within 48 hours if there's a fit.
+                  Inquiry received. You&apos;ll hear back within 48 hours if there&apos;s a fit.
                 </p>
               </motion.div>
             )}

@@ -16,6 +16,6 @@ export default function robots(): MetadataRoute.Robots {
       { userAgent: 'CCBot', disallow: '/' },
       { userAgent: 'img2dataset', disallow: '/' },
     ],
-    sitemap: 'https://muneer.architect/sitemap.xml',
+    sitemap: 'https://mpurayil.com/sitemap.xml',
   };
 }

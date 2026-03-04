@@ -23,6 +23,7 @@ import rust from 'highlight.js/lib/languages/rust';
 import java from 'highlight.js/lib/languages/java';
 import diff from 'highlight.js/lib/languages/diff';
 import type { BlogPost } from '@/app/lib/blog';
+import { trackCTAClick, trackBlogView, trackBlogScrollDepth, trackBlogShare, trackFAQOpen, trackExternalLink } from '@/app/lib/analytics';
 
 /* --- Register highlight.js languages --- */
 hljs.registerLanguage('typescript', typescript);
@@ -155,6 +156,7 @@ function SidebarTOC({ items }: { items: TocItem[] }) {
               href="https://calendly.com/gitspark/discussion-with-gitspark"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackCTAClick('calendly', 'sidebar_cta')}
               className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-mono text-white/60 hover:text-white transition-colors"
             >
               Free strategy call <ArrowUpRight className="w-3 h-3" />
@@ -439,7 +441,7 @@ function extractFaqSection(markdown: string): { contentBeforeFaq: string; faqIte
   return { contentBeforeFaq: beforeFaq, faqItems: items, contentAfterFaq: afterFaq };
 }
 
-function FaqAccordion({ items }: { items: FaqItem[] }) {
+function FaqAccordion({ items, slug }: { items: FaqItem[]; slug?: string }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
@@ -449,7 +451,11 @@ function FaqAccordion({ items }: { items: FaqItem[] }) {
         {items.map((item, i) => (
           <div key={i} className="border-b border-white/10">
             <button
-              onClick={() => setOpenIndex(openIndex === i ? null : i)}
+              onClick={() => {
+                const next = openIndex === i ? null : i;
+                setOpenIndex(next);
+                if (next !== null && slug) trackFAQOpen(slug, item.question);
+              }}
               className="flex items-center justify-between w-full py-5 text-left group"
             >
               <span className="text-[1.05rem] font-medium text-white/80 group-hover:text-white transition-colors pr-4">
@@ -492,6 +498,7 @@ function InlineCTA({ category }: { category: string }) {
         href="https://calendly.com/gitspark/discussion-with-gitspark"
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => trackCTAClick('calendly', 'inline_cta')}
         className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] font-mono text-white hover:text-white/70 transition-colors"
       >
         Book a Free Call <ArrowUpRight className="w-3 h-3" />
@@ -521,7 +528,7 @@ function splitContentAtMidpoint(markdown: string): [string, string] | null {
 /* --- Share buttons --- */
 function ShareButtons({ title, slug }: { title: string; slug: string }) {
   const [copied, setCopied] = useState(false);
-  const url = `https://muneer.architect/blog/${slug}`;
+  const url = `https://mpurayil.com/blog/${slug}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(url).then(() => {
@@ -538,6 +545,7 @@ function ShareButtons({ title, slug }: { title: string; slug: string }) {
           href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => trackBlogShare(slug, 'linkedin')}
           className="p-2.5 border border-white/10 text-white/30 hover:text-white hover:border-white/30 transition-colors"
           aria-label="Share on LinkedIn"
         >
@@ -547,13 +555,14 @@ function ShareButtons({ title, slug }: { title: string; slug: string }) {
           href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => trackBlogShare(slug, 'twitter')}
           className="p-2.5 border border-white/10 text-white/30 hover:text-white hover:border-white/30 transition-colors"
           aria-label="Share on X"
         >
           <Twitter className="w-3.5 h-3.5" />
         </a>
         <button
-          onClick={handleCopyLink}
+          onClick={() => { handleCopyLink(); trackBlogShare(slug, 'copy_link'); }}
           className="p-2.5 border border-white/10 text-white/30 hover:text-white hover:border-white/30 transition-colors"
           aria-label="Copy link"
         >
@@ -621,8 +630,9 @@ const markdownComponents = {
 };
 
 /* --- Reading progress bar --- */
-function ReadingProgress() {
+function ReadingProgress({ slug }: { slug: string }) {
   const [progress, setProgress] = useState(0);
+  const milestonesHit = useRef(new Set<number>());
 
   useEffect(() => {
     const handleScroll = () => {
@@ -634,10 +644,17 @@ function ReadingProgress() {
       const scrolled = window.scrollY - articleTop;
       const pct = Math.min(100, Math.max(0, (scrolled / (articleHeight - window.innerHeight)) * 100));
       setProgress(pct);
+      // Track scroll milestones at 25%, 50%, 75%, 100%
+      for (const milestone of [25, 50, 75, 100]) {
+        if (pct >= milestone && !milestonesHit.current.has(milestone)) {
+          milestonesHit.current.add(milestone);
+          trackBlogScrollDepth(slug, milestone);
+        }
+      }
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [slug]);
 
   if (progress <= 0) return null;
 
@@ -665,6 +682,10 @@ export default function BlogPostClient({ post, prevPost, nextPost, relatedPosts 
 
   const hasToc = toc.length >= 2;
 
+  useEffect(() => {
+    trackBlogView(post.slug, post.category, post.readTime);
+  }, [post.slug, post.category, post.readTime]);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -672,7 +693,7 @@ export default function BlogPostClient({ post, prevPost, nextPost, relatedPosts 
       exit={{ opacity: 0 }}
       className="pt-40 px-6 pb-32"
     >
-      <ReadingProgress />
+      <ReadingProgress slug={post.slug} />
 
       {/* Full-width header area */}
       <header className="max-w-[800px] mx-auto mb-16">
@@ -771,7 +792,7 @@ export default function BlogPostClient({ post, prevPost, nextPost, relatedPosts 
 
             {faqData && (
               <>
-                <FaqAccordion items={faqData.faqItems} />
+                <FaqAccordion items={faqData.faqItems} slug={post.slug} />
                 {faqData.contentAfterFaq && (
                   <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]} components={markdownComponents}>
                     {faqData.contentAfterFaq}
@@ -795,12 +816,14 @@ export default function BlogPostClient({ post, prevPost, nextPost, relatedPosts 
                 href="https://calendly.com/gitspark/discussion-with-gitspark"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackCTAClick('calendly', 'blog_cta_banner')}
                 className="inline-flex items-center gap-2 px-8 py-4 bg-white text-black text-[10px] uppercase tracking-[0.2em] font-mono font-bold hover:bg-white/90 transition-colors"
               >
                 Book a Free Call <ArrowUpRight className="w-3.5 h-3.5" />
               </a>
               <a
                 href="#intake"
+                onClick={() => trackCTAClick('intake_form', 'blog_cta_banner')}
                 className="inline-flex items-center gap-2 px-8 py-4 border border-white/20 text-white/60 text-[10px] uppercase tracking-[0.2em] font-mono hover:border-white/40 hover:text-white transition-colors"
               >
                 Send a Brief

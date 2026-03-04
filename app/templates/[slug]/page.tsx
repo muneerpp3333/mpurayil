@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${template.shortTitle} | Website Templates`,
     description: template.description,
-    alternates: { canonical: `https://muneer.architect/templates/${slug}` },
+    alternates: { canonical: `https://mpurayil.com/templates/${slug}` },
     openGraph: {
       title: `${template.shortTitle} | Website Templates`,
       description: template.description,
@@ -31,7 +31,7 @@ export default async function TemplateDetailPage({ params }: Props) {
   if (!template) notFound();
 
   const related = getRelatedTemplates(template.slug, 4);
-  const SITE_URL = 'https://muneer.architect';
+  const SITE_URL = 'https://mpurayil.com';
 
   const productJsonLd = {
     '@context': 'https://schema.org',

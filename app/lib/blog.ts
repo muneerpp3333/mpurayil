@@ -23,6 +23,7 @@ export interface BlogPostMeta {
   canonical?: string;
   noindex?: boolean;
   sources?: string[];
+  articleType?: string;
 }
 
 export interface BlogPost extends BlogPostMeta {
@@ -44,7 +45,7 @@ export interface BlogSEO {
   noindex: boolean;
 }
 
-const SITE_URL = 'https://muneer.architect';
+const SITE_URL = 'https://mpurayil.com';
 const DEFAULT_AUTHOR = 'Muneer Puthiya Purayil';
 const POSTS_PER_PAGE = 12;
 
@@ -74,6 +75,7 @@ function dbRowToMeta(row: any): BlogPostMeta {
     canonical: row.canonical || undefined,
     noindex: row.noindex || false,
     sources: row.sources?.length ? row.sources.filter((s: string) => s !== '') : undefined,
+    articleType: row.articleType || undefined,
   };
 }
 
@@ -181,7 +183,68 @@ export function getPostSEO(post: BlogPostMeta | BlogPost): BlogSEO {
   };
 }
 
+// Map categories to Schema.org Thing entities for `about`
+const CATEGORY_ENTITIES: Record<string, { '@type': string; name: string; url?: string }[]> = {
+  'AI Architecture': [
+    { '@type': 'Thing', name: 'Artificial Intelligence', url: 'https://en.wikipedia.org/wiki/Artificial_intelligence' },
+    { '@type': 'Thing', name: 'Software Architecture', url: 'https://en.wikipedia.org/wiki/Software_architecture' },
+  ],
+  'SaaS Architecture': [
+    { '@type': 'Thing', name: 'Software as a Service', url: 'https://en.wikipedia.org/wiki/Software_as_a_service' },
+    { '@type': 'Thing', name: 'Software Architecture', url: 'https://en.wikipedia.org/wiki/Software_architecture' },
+  ],
+  'SaaS Engineering': [
+    { '@type': 'Thing', name: 'Software as a Service', url: 'https://en.wikipedia.org/wiki/Software_as_a_service' },
+    { '@type': 'Thing', name: 'Software Engineering', url: 'https://en.wikipedia.org/wiki/Software_engineering' },
+  ],
+  'System Design': [
+    { '@type': 'Thing', name: 'Systems Design', url: 'https://en.wikipedia.org/wiki/Systems_design' },
+  ],
+  'DevOps': [
+    { '@type': 'Thing', name: 'DevOps', url: 'https://en.wikipedia.org/wiki/DevOps' },
+  ],
+  'Scalability': [
+    { '@type': 'Thing', name: 'Scalability', url: 'https://en.wikipedia.org/wiki/Scalability' },
+  ],
+  'Mobile Engineering': [
+    { '@type': 'Thing', name: 'Mobile Application Development', url: 'https://en.wikipedia.org/wiki/Mobile_app_development' },
+  ],
+  'Mobile/Frontend': [
+    { '@type': 'Thing', name: 'Mobile Application Development', url: 'https://en.wikipedia.org/wiki/Mobile_app_development' },
+    { '@type': 'Thing', name: 'Front-end Web Development', url: 'https://en.wikipedia.org/wiki/Front-end_web_development' },
+  ],
+};
+
+// Map articleType to Schema.org proficiencyLevel
+function getProficiencyLevel(articleType?: string): string {
+  switch (articleType) {
+    case 'tutorial': return 'Beginner';
+    case 'guide': return 'Intermediate';
+    case 'best_practices':
+    case 'case_study':
+    case 'original': return 'Expert';
+    case 'comparison': return 'Intermediate';
+    default: return 'Intermediate';
+  }
+}
+
+// Convert readTime string ("8 min read") to ISO 8601 duration
+function readTimeToIsoDuration(readTime: string): string {
+  const match = readTime.match(/(\d+)/);
+  const minutes = match ? parseInt(match[1], 10) : 5;
+  return `PT${minutes}M`;
+}
+
 export function getPostJsonLd(post: BlogPost): object {
+  const wordCount = post.content.split(/\s+/).length;
+  const aboutEntities = CATEGORY_ENTITIES[post.category] || [];
+
+  // Build tag-based `mentions` entities
+  const mentions = post.tags.slice(0, 5).map((tag) => ({
+    '@type': 'Thing',
+    name: tag,
+  }));
+
   return {
     '@context': 'https://schema.org',
     '@type': 'TechArticle',
@@ -192,6 +255,7 @@ export function getPostJsonLd(post: BlogPost): object {
     dateModified: `${post.updated || post.date}T00:00:00Z`,
     author: {
       '@type': 'Person',
+      '@id': `${SITE_URL}/#person`,
       name: post.author,
       url: SITE_URL,
       jobTitle: 'SaaS Architect & AI Systems Engineer',
@@ -209,9 +273,18 @@ export function getPostJsonLd(post: BlogPost): object {
       '@type': 'WebPage',
       '@id': `${SITE_URL}/blog/${post.slug}`,
     },
+    inLanguage: 'en-US',
     keywords: post.tags.join(', '),
     articleSection: post.category,
-    wordCount: post.content.split(/\s+/).length,
+    wordCount,
+    timeRequired: readTimeToIsoDuration(post.readTime),
+    proficiencyLevel: getProficiencyLevel(post.articleType),
+    speakable: {
+      '@type': 'SpeakableSpecification',
+      cssSelector: ['article h1', 'article .excerpt', 'article h2'],
+    },
+    ...(aboutEntities.length > 0 ? { about: aboutEntities } : {}),
+    ...(mentions.length > 0 ? { mentions } : {}),
     ...(post.sources && post.sources.length > 0
       ? { citation: post.sources.map((url) => ({ '@type': 'WebPage', url })) }
       : {}),
@@ -349,6 +422,45 @@ export function getBreadcrumbJsonLd(post: BlogPostMeta | BlogPost): object {
         item: `${SITE_URL}/blog/${post.slug}`,
       },
     ],
+  };
+}
+
+export function extractHowToJsonLd(post: BlogPost): object | null {
+  if (post.articleType !== 'tutorial') return null;
+
+  // Extract H2 sections as steps (skip intro, conclusion, FAQ, Related Reading)
+  const skipHeadings = /^(introduction|conclusion|faq|frequently asked questions|related reading|sources|references)$/i;
+  const stepMatches = [...post.content.matchAll(/^## (.+)$/gm)];
+  const steps: { name: string; text: string }[] = [];
+
+  for (let i = 0; i < stepMatches.length; i++) {
+    const heading = stepMatches[i][1].trim();
+    if (skipHeadings.test(heading)) continue;
+
+    const startIdx = stepMatches[i].index! + stepMatches[i][0].length;
+    const endIdx = i + 1 < stepMatches.length ? stepMatches[i + 1].index! : post.content.length;
+    const sectionContent = post.content.slice(startIdx, endIdx).trim();
+    // Take first paragraph as step description (max 300 chars)
+    const firstPara = sectionContent.split(/\n\n/)[0]?.replace(/[#*_`]/g, '').trim().slice(0, 300);
+    if (heading && firstPara) {
+      steps.push({ name: heading, text: firstPara });
+    }
+  }
+
+  if (steps.length < 2) return null;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: post.title,
+    description: post.excerpt,
+    totalTime: readTimeToIsoDuration(post.readTime),
+    step: steps.map((s, i) => ({
+      '@type': 'HowToStep',
+      position: i + 1,
+      name: s.name,
+      text: s.text,
+    })),
   };
 }
 

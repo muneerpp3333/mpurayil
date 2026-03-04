@@ -7,7 +7,8 @@ export const metadata: Metadata = {
   title: 'Muneer Puthiya Purayil | SaaS Architect & AI Systems Engineer',
   description:
     'SaaS architect and AI systems engineer with 10+ years shipping production infrastructure. Focused on scalable architecture, agentic AI, and enterprise mobile.',
-  alternates: { canonical: 'https://muneer.architect' },
+  alternates: { canonical: 'https://mpurayil.com' },
+  robots: { index: true, follow: true, 'max-snippet': -1, 'max-image-preview': 'large' as const, 'max-video-preview': -1 },
 };
 
 export default function HomePage() {

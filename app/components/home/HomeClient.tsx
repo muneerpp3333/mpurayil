@@ -3,6 +3,7 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { motion, useMotionValue, useSpring } from 'motion/react';
 import { ArrowUpRight, Layers, Smartphone, Brain, Zap, Clock, Tag } from 'lucide-react';
+import { trackCTAClick } from '../../lib/analytics';
 import Link from 'next/link';
 import { type BlogPostMeta } from '@/app/lib/blog';
 import { type Template } from '@/src/data/templates';
@@ -294,6 +295,7 @@ export default function HomeClient({ posts, featuredTemplates }: HomeClientProps
                 <MagneticButton>
                   <a
                     href="#intake"
+                    onClick={() => trackCTAClick('intake_form', 'hero')}
                     className="group flex items-center gap-8 border border-white/20 px-10 py-6 hover:bg-white hover:text-black transition-all duration-500 relative overflow-hidden"
                   >
                     {/* Sweep fill effect */}

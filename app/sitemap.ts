@@ -4,7 +4,7 @@ import { templates } from '@/src/data/templates';
 
 export const dynamic = 'force-static';
 
-const SITE_URL = 'https://muneer.architect';
+const SITE_URL = 'https://mpurayil.com';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const posts = getAllPosts();

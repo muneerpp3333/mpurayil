@@ -5,11 +5,11 @@ import { templates } from '@/src/data/templates';
 export const metadata: Metadata = {
   title: 'Website Templates',
   description: 'Ready-made, high-performance website templates built to convert. Salon, e-commerce, Shopify stores, and more. Live in 7 days, starting at 1499 AED.',
-  alternates: { canonical: 'https://muneer.architect/templates' },
+  alternates: { canonical: 'https://mpurayil.com/templates' },
   openGraph: {
     title: 'Website Templates',
     description: 'Ready-made, high-performance website templates built to convert. Salon, e-commerce, Shopify stores, and more.',
-    url: 'https://muneer.architect/templates',
+    url: 'https://mpurayil.com/templates',
     images: [{ url: '/og-default.png', width: 1200, height: 630 }],
   },
   twitter: {
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   },
 };
 
-const SITE_URL = 'https://muneer.architect';
+const SITE_URL = 'https://mpurayil.com';
 
 const templatesJsonLd = {
   '@context': 'https://schema.org',

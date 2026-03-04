@@ -3,6 +3,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
+import { trackTemplateView, trackTemplateOrder } from '../../lib/analytics';
 import {
   ArrowUpRight,
   ArrowLeft,
@@ -172,6 +173,7 @@ export default function TemplateDetailClient({ template, related }: TemplateDeta
                 href={template.orderUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackTemplateOrder(template.slug, template.title)}
                 className="group inline-flex items-center gap-4 border border-white/20 px-10 py-5 hover:bg-white hover:text-black transition-all duration-500 relative overflow-hidden"
               >
                 <span className="absolute inset-0 bg-white scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-500" />
@@ -395,6 +397,7 @@ export default function TemplateDetailClient({ template, related }: TemplateDeta
             href={template.orderUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => trackTemplateOrder(template.slug, template.title)}
             className="group inline-flex items-center gap-6 border border-white/20 px-10 py-6 hover:bg-white hover:text-black transition-all duration-500 relative overflow-hidden"
           >
             <span className="absolute inset-0 bg-white scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-500" />

@@ -4,7 +4,8 @@ import Nav from './components/Nav';
 import IntakeSection from './components/IntakeSection';
 import Footer from './components/Footer';
 
-const SITE_URL = 'https://muneer.architect';
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
+const SITE_URL = 'https://mpurayil.com';
 const DEFAULT_AUTHOR = 'Muneer Puthiya Purayil';
 const description = 'SaaS architect and AI systems engineer with 10+ years shipping production infrastructure. Focused on scalable architecture, agentic AI, and enterprise mobile.';
 
@@ -138,6 +139,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+        {GA_ID && (
+          <>
+            <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${GA_ID}');`,
+              }}
+            />
+          </>
+        )}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />

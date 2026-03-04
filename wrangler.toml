@@ -1,5 +1,8 @@
 name = "mpurayil-com"
 pages_build_output_dir = "out"
+compatibility_date = "2026-03-01"
 
-[env.production]
-name = "mpurayil-com"
+[[d1_databases]]
+binding = "DB"
+database_name = "mpurayil-db"
+database_id = "df62f291-d992-4b8f-b104-c5feabcf17c7"

@@ -5,11 +5,12 @@ import BlogListClient from '../components/blog/BlogListClient';
 export const metadata: Metadata = {
   title: 'Technical Journal',
   description: 'Notes on architecture, systems design, and agentic AI. Drawn from production work, not theory.',
-  alternates: { canonical: 'https://muneer.architect/blog' },
+  alternates: { canonical: 'https://mpurayil.com/blog' },
+  robots: { index: true, follow: true, 'max-snippet': -1, 'max-image-preview': 'large' as const, 'max-video-preview': -1 },
   openGraph: {
     title: 'Technical Journal',
     description: 'Notes on architecture, systems design, and agentic AI. Drawn from production work, not theory.',
-    url: 'https://muneer.architect/blog',
+    url: 'https://mpurayil.com/blog',
     images: [{ url: '/og-default.png', width: 1200, height: 630 }],
   },
   twitter: {
@@ -29,8 +30,8 @@ export default function BlogPage() {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://muneer.architect' },
-      { '@type': 'ListItem', position: 2, name: 'Journal', item: 'https://muneer.architect/blog' },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://mpurayil.com' },
+      { '@type': 'ListItem', position: 2, name: 'Journal', item: 'https://mpurayil.com/blog' },
     ],
   };
   return (

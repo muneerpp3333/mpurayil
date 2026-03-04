@@ -1,0 +1,61 @@
+# Muneer Puthiya Purayil — mpurayil.com
+
+> SaaS architect and AI systems engineer with 10+ years shipping production infrastructure. Specializing in scalable architecture, agentic AI systems, and enterprise mobile.
+
+## Site Overview
+
+This is the personal website and technical journal of Muneer Puthiya Purayil, a Dubai-based SaaS architect. The site contains:
+
+- **Technical Journal** (`/blog`): 250+ in-depth articles on software architecture, agentic AI, DevOps, system design, SaaS engineering, mobile engineering, and scalability. Articles include guides, tutorials, comparisons, best practices, and case studies.
+- **Portfolio** (`/portfolio`): Case studies from production systems including $4B automotive platforms, banking systems with sub-0.1% crash rates, and enterprise SaaS.
+- **Website Templates** (`/templates`): 14 production-ready website templates for salons, e-commerce, Shopify stores, and more.
+- **Open Source** (`/open-source`): Open-source TypeScript libraries for mobile app generation, SaaS architecture, and enterprise engineering.
+
+## Key Pages
+
+- Homepage: https://mpurayil.com
+- Blog Index: https://mpurayil.com/blog
+- Portfolio: https://mpurayil.com/portfolio
+- Templates: https://mpurayil.com/templates
+- Open Source: https://mpurayil.com/open-source
+- Sitemap: https://mpurayil.com/sitemap.xml
+
+## Blog Categories
+
+- AI Architecture
+- SaaS Architecture
+- SaaS Engineering
+- System Design
+- DevOps
+- Scalability
+- Mobile Engineering
+- Mobile/Frontend
+
+## Article Types
+
+- Guides: Comprehensive deep-dives on specific technologies and patterns
+- Tutorials: Step-by-step implementation walkthroughs with code examples
+- Comparisons: Balanced evaluations of tools, frameworks, and approaches
+- Best Practices: Production-tested patterns and conventions
+- Case Studies: Real-world implementation stories from production systems
+
+## Author
+
+Muneer Puthiya Purayil
+- Role: SaaS Architect & AI Systems Engineer
+- Location: Dubai, UAE
+- Expertise: SaaS architecture, agentic AI, enterprise mobile, cloud infrastructure, microservices, Kubernetes, TypeScript, React, React Native
+- LinkedIn: https://linkedin.com/in/muneer-p-5052b6128
+- GitHub: https://github.com/muneerpp3333
+
+## Content Licensing
+
+All blog content is original and written by Muneer Puthiya Purayil. Content may be cited with attribution.
+
+## Structured Data
+
+All pages include JSON-LD structured data (Schema.org). Blog posts use TechArticle, FAQPage, BreadcrumbList, and HowTo schemas. The site includes Person, WebSite, and ProfessionalService schemas.
+
+## Contact
+
+For architecture consulting, strategy calls, or project inquiries: https://calendly.com/gitspark/discussion-with-gitspark

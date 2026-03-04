@@ -5,11 +5,11 @@ export const metadata: Metadata = {
   title: 'Open Source',
   description:
     'Patterns extracted from production systems. Open-sourced TypeScript libraries for mobile app generation, SaaS architecture, and enterprise engineering.',
-  alternates: { canonical: 'https://muneer.architect/open-source' },
+  alternates: { canonical: 'https://mpurayil.com/open-source' },
   openGraph: {
     title: 'Open Source',
     description: 'Patterns extracted from production systems. Open-sourced TypeScript libraries for mobile app generation, SaaS architecture, and enterprise engineering.',
-    url: 'https://muneer.architect/open-source',
+    url: 'https://mpurayil.com/open-source',
     images: [{ url: '/og-default.png', width: 1200, height: 630 }],
   },
   twitter: {
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   },
 };
 
-const SITE_URL = 'https://muneer.architect';
+const SITE_URL = 'https://mpurayil.com';
 
 const breadcrumbJsonLd = {
   '@context': 'https://schema.org',

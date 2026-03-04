@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getAllPosts, getPostBySlug, getPostSEO, getPostJsonLd, getBreadcrumbJsonLd, extractFaqJsonLd } from '../../lib/blog';
+import { getAllPosts, getPostBySlug, getPostSEO, getPostJsonLd, getBreadcrumbJsonLd, extractFaqJsonLd, extractHowToJsonLd } from '../../lib/blog';
 import BlogPostClient from '../../components/blog/BlogPostClient';
 
 type Props = { params: Promise<{ slug: string }> };
@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: post.title,
       description: post.excerpt,
       type: 'article',
-      url: `https://muneer.architect/blog/${slug}`,
+      url: `https://mpurayil.com/blog/${slug}`,
       siteName: 'Muneer Puthiya Purayil',
       publishedTime: post.date,
       modifiedTime: post.updated || post.date,
@@ -36,7 +36,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: post.excerpt,
       images: post.ogImage ? [post.ogImage] : ['/og-default.png'],
     },
-    robots: post.noindex ? { index: false } : undefined,
+    robots: post.noindex
+      ? { index: false, follow: false }
+      : { index: true, follow: true, 'max-snippet': -1, 'max-image-preview': 'large' as const, 'max-video-preview': -1 },
   };
 }
 
@@ -51,6 +53,8 @@ export default async function BlogPostPage({ params }: Props) {
   jsonLdItems.push(getBreadcrumbJsonLd(post));
   const faqJsonLd = extractFaqJsonLd(post.content);
   if (faqJsonLd) jsonLdItems.push(faqJsonLd);
+  const howToJsonLd = extractHowToJsonLd(post);
+  if (howToJsonLd) jsonLdItems.push(howToJsonLd);
 
   // Prev/Next navigation
   const allPosts = getAllPosts();

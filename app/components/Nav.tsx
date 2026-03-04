@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { trackCTAClick } from '../lib/analytics';
 
 const NavLink = ({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) => (
   <Link
@@ -67,6 +68,7 @@ const Nav = () => {
             ))}
             <a
               href="#intake"
+              onClick={() => trackCTAClick('intake_form', 'nav')}
               className="ml-4 px-5 py-2.5 border border-white/20 text-white/60 hover:border-white/60 hover:text-white transition-all duration-300"
             >
               Inquire
